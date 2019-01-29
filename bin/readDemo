@@ -1,0 +1,6 @@
+#1/bin/bash
+
+rosbag record -o ~/bagdump/JP_ /iiwa/state/JointPosition & 
+rosbag record -o ~/bagdump/JV_ /iiwa/state/JointVelocity & 
+rosbag record -o ~/bagdump/ROS_JS_ /iiwa/joint_states &
+rosbag record -o ~/bagdump/CP_ /iiwa/state/CartesianPose

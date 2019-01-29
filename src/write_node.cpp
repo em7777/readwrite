@@ -15,23 +15,31 @@
 #include "sensor_msgs/JointState.h"
 #include "trajectory_msgs/JointTrajectory.h"
 #include "trajectory_msgs/JointTrajectoryPoint.h"
+#include "iiwa_msgs/JointPosition.h"
+#include "iiwa_msgs/JointPositionVelocity.h"
+#include "iiwa_msgs/JointQuantity.h"
+#include "iiwa_msgs/JointVelocity.h"
+#include "iiwa_ros.h"
+
+
+//#include </home/martin/ros_ws/src/iiwa_stack/iiwa_ros/include/iiwa_ros.h>
 
 using namespace std;
 
-void moveToStart(trajectory_msgs::JointTrajectory &new_trajectory)
+
+void clearPositions(iiwa_msgs::JointPosition &new_trajectory)
 {
-    trajectory_msgs::JointTrajectoryPoint trajectory_start_point;
+
+}
+void moveToStart(iiwa_msgs::JointPosition &joint_pos, ros::Publisher &pub)
+{
     rosbag::Bag bag;
     bag.open("/home/martin/bagdump/test.bag", rosbag::bagmode::Read);
     ROS_INFO("moveToStart opening the bag");
-
     std::vector<std::string> topics;
     std::string my_topic = "/iiwa/joint_states";
     topics.push_back(my_topic);
     rosbag::View view(bag, rosbag::TopicQuery(topics));
-    new_trajectory.points.clear();
-    new_trajectory.header.stamp = ros::Time::now();
-    trajectory_start_point.time_from_start = ros::Duration(2);
 
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
                 {
@@ -41,12 +49,16 @@ void moveToStart(trajectory_msgs::JointTrajectory &new_trajectory)
                         if (i != NULL)
                         {
 
-                            for (int k = 0; k < 7; k++)
-                            {
-                                trajectory_start_point.positions.push_back(i->position[k]);
-                                //trajectory_start_point.velocities.push_back(1);
-                            }
-                            new_trajectory.points.push_back(trajectory_start_point);
+
+                            joint_pos.position.a1 = i->position[0];
+                            joint_pos.position.a2 = i->position[1];
+                            joint_pos.position.a3 = i->position[2];
+                            joint_pos.position.a4 = i->position[3];
+                            joint_pos.position.a5 = i->position[4];
+                            joint_pos.position.a6 = i->position[5];
+                            joint_pos.position.a7 = i->position[6];
+                            pub.publish(joint_pos);
+
                             bag.close();
                             return;
                         }
@@ -56,39 +68,31 @@ void moveToStart(trajectory_msgs::JointTrajectory &new_trajectory)
     return;
 }
 
-void moveToHome(trajectory_msgs::JointTrajectory &new_trajectory)
+void moveToHome(iiwa_msgs::JointPosition &joint_pos, ros::Publisher &pub)
 {
-    trajectory_msgs::JointTrajectoryPoint trajectory_home_point;
-    new_trajectory.points.clear();
-    new_trajectory.header.stamp = ros::Time::now();
-    trajectory_home_point.time_from_start = ros::Duration(2);
 
-    for (int k = 0; k < 7; k++)
-    {
-        trajectory_home_point.positions.push_back(0);
-        //trajectory_start_point.velocities.push_back(1);
-    }
-    trajectory_home_point.positions[6] = 1;
-    new_trajectory.points.push_back(trajectory_home_point);
 
+    joint_pos.position.a1 = 0;
+    joint_pos.position.a2 = 0;
+    joint_pos.position.a3 = 0;
+    joint_pos.position.a4 = 0;
+    joint_pos.position.a5 = 0;
+    joint_pos.position.a6 = 0;
+    joint_pos.position.a7 = 0;
+    pub.publish(joint_pos);
     return;
 }
 
-void execBagTrajectory(trajectory_msgs::JointTrajectory &new_trajectory)
+void execBagTrajectory(iiwa_msgs::JointPosition &joint_pos, ros::Publisher &pub)
 {
-    trajectory_msgs::JointTrajectoryPoint trajectory_point;
     rosbag::Bag bag;
     bag.open("/home/martin/bagdump/test.bag", rosbag::bagmode::Read);
     ROS_INFO("Opening Bag Trajectory");
-
     ros::Duration tfs;
     std::vector<std::string> topics;
     std::string my_topic = "/iiwa/joint_states";
     topics.push_back(my_topic);
     rosbag::View view(bag, rosbag::TopicQuery(topics));
-    new_trajectory.points.clear();
-    new_trajectory.header.stamp = ros::Time::now();
-    trajectory_point.time_from_start = ros::Duration(0.0);
 
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
                 {
@@ -98,15 +102,15 @@ void execBagTrajectory(trajectory_msgs::JointTrajectory &new_trajectory)
                         if (i != NULL)
                         {
 
-                            for (int k = 0; k < 7; k++)
-                            {
-                                trajectory_point.positions.push_back(i->position[k]);
-                                //trajectory_start_point.velocities.push_back(1);
-                            }
-                            tfs = trajectory_point.time_from_start;
-                            trajectory_point.time_from_start = tfs + ros::Duration(0.02);
-                            new_trajectory.points.push_back(trajectory_point);
-                            trajectory_point.positions.clear();
+                            joint_pos.position.a1 = i->position[0];
+                            joint_pos.position.a2 = i->position[1];
+                            joint_pos.position.a3 = i->position[2];
+                            joint_pos.position.a4 = i->position[3];
+                            joint_pos.position.a5 = i->position[4];
+                            joint_pos.position.a6 = i->position[5];
+                            joint_pos.position.a7 = i->position[6];
+                            pub.publish(joint_pos);
+                            ros::Duration(0.02).sleep();
 
                         }
                     }
@@ -121,19 +125,10 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
     ros::Publisher pub = n.advertise<trajectory_msgs::JointTrajectory>("iiwa/PositionJointInterface_trajectory_controller/command", 1);
     ros::Rate sleep_timer(0.1); // update rate
+    iiwa_ros::iiwaRos ok;
 
-    trajectory_msgs::JointTrajectory new_trajectory;
-    trajectory_msgs::JointTrajectoryPoint trajectory_point1;
+    iiwa_msgs::JointPosition joint_pos;
 
-    new_trajectory.joint_names.push_back("iiwa_joint_1");
-    new_trajectory.joint_names.push_back("iiwa_joint_2");
-    new_trajectory.joint_names.push_back("iiwa_joint_3");
-    new_trajectory.joint_names.push_back("iiwa_joint_4");
-    new_trajectory.joint_names.push_back("iiwa_joint_5");
-    new_trajectory.joint_names.push_back("iiwa_joint_6");
-    new_trajectory.joint_names.push_back("iiwa_joint_7");
-    new_trajectory.points.clear();
-    trajectory_point1.positions.clear();
 
     int jnum;
 
@@ -146,22 +141,19 @@ int main(int argc, char **argv)
         if (jnum ==1)
         {
             ROS_INFO("Moving to Bag Start Pt.");
-            moveToStart(new_trajectory);
-            pub.publish(new_trajectory);
+            moveToStart(joint_pos, pub);
         }
 
         if (jnum ==3)
         {
             ROS_INFO("Moving Home");
-            moveToHome(new_trajectory);
-            pub.publish(new_trajectory);
+            moveToHome(joint_pos, pub);
         }
 
         if (jnum ==5)
         {
             ROS_INFO("Executing Trajectory");
-            execBagTrajectory(new_trajectory);
-            pub.publish(new_trajectory);
+            execBagTrajectory(joint_pos, pub);
         }
 
         sleep(1);
